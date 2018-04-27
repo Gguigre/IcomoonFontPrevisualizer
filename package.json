@@ -1,0 +1,25 @@
+{
+  "name": "app",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "create-react-app": "^1.5.2",
+    "jszip": "^3.1.5",
+    "react": "^16.3.0",
+    "react-dom": "^16.3.0",
+    "react-dropzone": "^4.2.9",
+    "react-native-vector-icons": "^4.6.0",
+    "react-native-web": "^0.5.4",
+    "react-toggle-button": "^2.2.0"
+  },
+  "proxy": "https://react-native.glitch.me",
+  "devDependencies": {
+    "react-scripts": "0.9.5"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test --env=jsdom",
+    "eject": "react-scripts eject"
+  }
+}
