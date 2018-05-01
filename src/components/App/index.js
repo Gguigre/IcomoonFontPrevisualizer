@@ -1,25 +1,30 @@
 import React, { Component } from "react";
-import { Button, Image, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { createIconSetFromIcoMoon } from "react-native-vector-icons";
 import Dropzone from "react-dropzone";
 import ToggleButton from "react-toggle-button";
+import TwoColorPicker from "./TwoColorPicker";
 
-var JSZip = require("jszip");
-
-const Link = props => (
-  <Text
-    {...props}
-    accessibilityRole="link"
-    style={StyleSheet.compose(styles.link, props.style)}
-  />
-);
-
+const JSZip = require("jszip");
 const style = document.createElement("style");
 style.type = "text/css";
 document.head.appendChild(style);
 
 let Icon;
 
+const jsZip = new JSZip();
+const reader = new FileReader();
+reader.onloadend = () => {
+  const iconFontStyles = `@font-face {
+        font-family: icomoon;
+        src: url(${reader.result});
+      }`;
+  if (style.styleSheet) {
+    style.styleSheet.cssText = iconFontStyles;
+  } else {
+    style.appendChild(document.createTextNode(iconFontStyles));
+  }
+};
 class App extends Component<void, StateType> {
   state = {
     iconSize: 50,
@@ -31,45 +36,24 @@ class App extends Component<void, StateType> {
   };
 
   _handleZipFileChange = zipFile => {
-    var zip = new JSZip();
-
-    zip
+    jsZip
       .loadAsync(zipFile[0])
-      .then(
-        zip => {
-          return {
-            selection: zip.file("selection.json").async("string"),
-            ttfFile: zip.file("fonts/icomoon.ttf").async("blob")
-          };
-        },
-        () => alert("Not a valid zip file")
-      )
+      .then(zipFile => ({
+        selection: zipFile.file("selection.json").async("string"),
+        ttfFile: zipFile.file("fonts/icomoon.ttf").async("blob")
+      }))
       .then(filePromises => {
-        filePromises.ttfFile.then(ttfFile => {
-          filePromises.ttfFile.then(ttfFile => {
-            var reader = new FileReader();
+        filePromises.ttfFile.then(ttfFile => reader.readAsDataURL(ttfFile));
+        filePromises.selection.then(this._parseSelectionFile);
+      })
+      .catch(() => alert("Not a valid zip file"));
+  };
 
-            reader.onloadend = function() {
-              const iconFontStyles = `@font-face {
-                  font-family: icomoon;
-                  src: url(${reader.result});
-                }`;
-              if (style.styleSheet) {
-                style.styleSheet.cssText = iconFontStyles;
-              } else {
-                style.appendChild(document.createTextNode(iconFontStyles));
-              }
-            };
-            reader.readAsDataURL(ttfFile);
-          });
-        });
-        filePromises.selection.then(selectionFile => {
-          const icons = JSON.parse(selectionFile).icons;
-          Icon = createIconSetFromIcoMoon(JSON.parse(selectionFile));
-          this.setState({ iconNames: icons.map(icon => icon.properties.name) });
-          this.forceUpdate();
-        });
-      });
+  _parseSelectionFile = selectionFile => {
+    const icons = JSON.parse(selectionFile).icons;
+    Icon = createIconSetFromIcoMoon(JSON.parse(selectionFile));
+    this.setState({ iconNames: icons.map(icon => icon.properties.name) });
+    this.forceUpdate();
   };
 
   _handleIconSizeChange = value => {
@@ -94,6 +78,76 @@ class App extends Component<void, StateType> {
     this._handleZipFileChange(file);
   };
 
+  _withBorderIcon = () => ({
+    margin: this.state.iconSize / 10,
+    borderWidth: 1,
+    borderColor: "#000000"
+  });
+
+  _withoutBorderIcon = () => ({ margin: this.state.iconSize / 10 + 1 });
+
+  _renderIcons = () =>
+    this.state.iconNames.map((iconName, index) => (
+      <View
+        key={index}
+        style={[
+          this.state.showBorder
+            ? this._withBorderIcon()
+            : this._withoutBorderIcon()
+        ]}
+      >
+        <Icon
+          style={
+            this.state.crop && {
+              overflow: "hidden"
+            }
+          }
+          color={this.state.iconsColor}
+          name={iconName}
+          size={Number(this.state.iconSize)}
+        />
+      </View>
+    ));
+
+  _renderParametersBoard = () => (
+    <View style={styles.parameters}>
+      <View style={styles.parameter}>
+        <Text>Montrer les icones originales</Text>
+        <ToggleButton value={!this.state.crop} onToggle={this._onCropToggle} />
+      </View>
+      <View style={styles.parameter}>
+        <Text>Montrer les bords des icônes</Text>
+        <ToggleButton
+          value={this.state.showBorder}
+          onToggle={this._onShowBorderToggle}
+        />
+      </View>
+      <View style={styles.parameter}>
+        <Text>Size : {this.state.iconSize}</Text>
+        <input
+          type="range"
+          min="1"
+          max="100"
+          value={this.state.iconSize}
+          onChange={e => this._handleIconSizeChange(e.target.value)}
+        />
+      </View>
+      <TwoColorPicker
+        style={styles.parameter}
+        onFirstColorChange={this._onBackgroundColorChange}
+        onSecondColorChange={this._onIconsColorChange}
+        firstColor={this.state.backgroundColor}
+        secondColor={this.state.iconsColor}
+        firstLabel="Couleur d'arrière plan"
+        secondLabel="Couleur des icônes"
+      />
+    </View>
+  );
+
+  _onCropToggle = value => this.setState({ crop: value });
+
+  _onShowBorderToggle = value => this.setState({ showBorder: !value });
+
   render() {
     return (
       <View
@@ -104,91 +158,12 @@ class App extends Component<void, StateType> {
         </View>
         <Dropzone
           onDrop={this._onFileDrop}
-          style={{
-            width: "90%",
-            borderWidth: 2,
-            borderColor: "#666",
-            borderStyle: "dashed",
-            borderRadius: 5,
-            justifyContent: "center",
-            alignItems: "center"
-          }}
+          style={StyleSheet.flatten(styles.dropZone)}
         >
           <p style={{ textAlign: "center" }}>Drop Icomoon ZIP here</p>
         </Dropzone>
-        <View style={styles.parameters}>
-          <View style={styles.parameter}>
-            <Text>Montrer les icones originales</Text>
-            <ToggleButton
-              value={!this.state.crop}
-              onToggle={value => this.setState({ crop: value })}
-            />
-          </View>
-          <View style={styles.parameter}>
-            <Text>Montrer les bords des icônes</Text>
-            <ToggleButton
-              value={this.state.showBorder}
-              onToggle={value => this.setState({ showBorder: !value })}
-            />
-          </View>
-          <View style={styles.parameter}>
-            <Text>Size : {this.state.iconSize}</Text>
-            <input
-              type="range"
-              min="1"
-              max="100"
-              value={this.state.iconSize}
-              onChange={e => this._handleIconSizeChange(e.target.value)}
-            />
-          </View>
-          <View style={styles.parameter}>
-            <View style={styles.colorPicker}>
-              <label htmlFor="backgroundColor">Couleur d'arrière plan</label>
-              <input
-                id="backgroundColor"
-                type="color"
-                value={this.state.backgroundColor}
-                onChange={this._onBackgroundColorChange}
-              />
-            </View>
-            <View style={styles.colorPicker}>
-              <label htmlFor="iconsColor">Couleur des icônes</label>
-              <input
-                id="iconsColor"
-                type="color"
-                value={this.state.iconsColor}
-                onChange={this._onIconsColorChange}
-              />
-            </View>
-          </View>
-        </View>
-        <View style={styles.iconsWrapper}>
-          {this.state.iconNames.map((iconName, index) => (
-            <View
-              key={index}
-              style={[
-                this.state.showBorder
-                  ? {
-                      margin: this.state.iconSize / 10,
-                      borderWidth: 1,
-                      borderColor: "#000000"
-                    }
-                  : { margin: this.state.iconSize / 10 + 1 }
-              ]}
-            >
-              <Icon
-                style={
-                  this.state.crop && {
-                    overflow: "hidden"
-                  }
-                }
-                color={this.state.iconsColor}
-                name={iconName}
-                size={Number(this.state.iconSize)}
-              />
-            </View>
-          ))}
-        </View>
+        {this._renderParametersBoard()}
+        <View style={styles.iconsWrapper}>{this._renderIcons()}</View>
       </View>
     );
   }
@@ -211,14 +186,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     flex: 1
   },
-  colorPicker: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    width: "100%"
-  },
   iconsWrapper: {
     flexDirection: "row",
-    flexWrap: "wrap"
+    flexWrap: "wrap",
+    width: "90%"
   },
   header: {
     padding: 20
@@ -228,6 +199,15 @@ const styles = StyleSheet.create({
     fontSize: "1.5rem",
     marginVertical: "1em",
     textAlign: "center"
+  },
+  dropZone: {
+    width: "90%",
+    borderWidth: 2,
+    borderColor: "#666",
+    borderStyle: "dashed",
+    borderRadius: 5,
+    justifyContent: "center",
+    alignItems: "center"
   }
 });
 
