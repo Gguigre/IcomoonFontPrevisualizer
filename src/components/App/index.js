@@ -30,7 +30,7 @@ class App extends Component<void, StateType> {
     iconSize: 50,
     iconNames: [],
     backgroundColor: "#FFFFFF",
-    iconsColor: "#000000",
+    iconsColor: "#555555",
     showBorder: true,
     crop: true
   };
@@ -86,28 +86,36 @@ class App extends Component<void, StateType> {
 
   _withoutBorderIcon = () => ({ margin: this.state.iconSize / 10 + 1 });
 
-  _renderIcons = () =>
-    this.state.iconNames.map((iconName, index) => (
-      <View
-        key={index}
-        style={[
-          this.state.showBorder
-            ? this._withBorderIcon()
-            : this._withoutBorderIcon()
-        ]}
-      >
-        <Icon
-          style={
-            this.state.crop && {
-              overflow: "hidden"
+  _renderIcons = () => (
+    <View
+      style={[
+        styles.iconsWrapper,
+        { backgroundColor: this.state.backgroundColor }
+      ]}
+    >
+      {this.state.iconNames.map((iconName, index) => (
+        <View
+          key={index}
+          style={[
+            this.state.showBorder
+              ? this._withBorderIcon()
+              : this._withoutBorderIcon()
+          ]}
+        >
+          <Icon
+            style={
+              this.state.crop && {
+                overflow: "hidden"
+              }
             }
-          }
-          color={this.state.iconsColor}
-          name={iconName}
-          size={Number(this.state.iconSize)}
-        />
-      </View>
-    ));
+            color={this.state.iconsColor}
+            name={iconName}
+            size={Number(this.state.iconSize)}
+          />
+        </View>
+      ))}
+    </View>
+  );
 
   _renderParametersBoard = () => (
     <View style={styles.parameters}>
@@ -150,9 +158,7 @@ class App extends Component<void, StateType> {
 
   render() {
     return (
-      <View
-        style={[styles.app, { backgroundColor: this.state.backgroundColor }]}
-      >
+      <View style={styles.app}>
         <View style={styles.header}>
           <Text style={styles.title}>Icomoon font previsualizer</Text>
         </View>
@@ -163,7 +169,7 @@ class App extends Component<void, StateType> {
           <p style={{ textAlign: "center" }}>Drop Icomoon ZIP here</p>
         </Dropzone>
         {this._renderParametersBoard()}
-        <View style={styles.iconsWrapper}>{this._renderIcons()}</View>
+        {this.state.iconNames.length > 0 && this._renderIcons()}
       </View>
     );
   }
@@ -177,19 +183,21 @@ const styles = StyleSheet.create({
   },
   parameters: {
     flexDirection: "row",
-    marginTop: 16,
+    marginVertical: "1%",
     justifyContent: "space-around",
     width: "80%"
   },
   parameter: {
     flexDirection: "column",
     alignItems: "center",
+    justifyContent: "center",
     flex: 1
   },
   iconsWrapper: {
     flexDirection: "row",
     flexWrap: "wrap",
-    width: "90%"
+    width: "90%",
+    padding: "2%"
   },
   header: {
     padding: 20
